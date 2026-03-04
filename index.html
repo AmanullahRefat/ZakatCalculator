@@ -1,0 +1,356 @@
+import React, { useState } from 'react';
+
+// Utility to convert numbers to Bengali numerals
+const toBnNum = (num) => {
+  if (num === null || num === undefined) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return num.toString().replace(/\d/g, x => bengaliDigits[x]);
+};
+
+// Utility to format numbers as currency with Bengali numerals
+const formatCurrencyBn = (num) => {
+  if (!num && num !== 0) return '';
+  const formatted = num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  return toBnNum(formatted);
+};
+
+export default function ZakatCalculator() {
+  const [activeTab, setActiveTab] = useState('calculator');
+  const [values, setValues] = useState({});
+
+  const handleChange = (id, val) => {
+    setValues(prev => ({ ...prev, [id]: val }));
+  };
+
+  const getValue = (id) => {
+    const val = parseFloat(values[id]);
+    return isNaN(val) ? 0 : val;
+  };
+
+  // Define Asset Rows based on the uploaded image
+  const assetRows = [
+    { id: 'a1', label: 'গহনার বর্তমান মূল্য (স্বর্ণ, রূপা যে কোন অবস্থায় থাকুক না কেন)', arrow: true },
+    { id: 'a2', label: 'ডায়মন্ড, মূল্যবান পাথর ইত্যাদি (যদি ব্যবসার জন্য হয়)', arrow: true },
+    { id: 'a3', label: 'হাতে নগদ টাকা', arrow: true },
+    { id: 'a4_title', label: 'ব্যাংক একাউন্ট', arrow: true, isTitle: true },
+    { id: 'a4_a', label: '(ক) সেভিংস একাউন্ট', indent: true },
+    { id: 'a4_b', label: '(খ) কারেন্ট একাউন্ট', indent: true },
+    { id: 'a4_c', label: '(গ) ফিক্সড ডিপোজিট', indent: true },
+    { id: 'a4_d', label: '(ঘ) বিভিন্ন ধরনের ডি পি এস ইত্যাদি', indent: true },
+    { id: 'a5', label: 'বৈদেশিক মুদ্রা (নগদ হাতে, ব্যাংকে, বন্ড, ট্রাভেলার্স চেক ইত্যাদির মূল্য দেশীয় মুদ্রায় হিসাব করতে হবে)', arrow: true },
+    { id: 'a6_title', label: 'শেয়ার', arrow: true, isTitle: true },
+    { id: 'a6_a', label: '(ক) স্টক এক্সচেঞ্জ', indent: true },
+    { id: 'a6_b', label: '(খ) ক্যাপিটাল গেইন', indent: true },
+    { id: 'a7', label: 'ব্যাংক গ্যারান্টি মানি', arrow: true },
+    { id: 'a8', label: 'সিকিউরিটি মানি', arrow: true },
+    { id: 'a9', label: 'ব্যাংক লোন', arrow: true },
+    { id: 'a10', label: 'বায়না দলিলের ভিত্তিতে অর্জিত টাকা', arrow: true },
+    { id: 'a11', label: 'বিক্রিত পণ্যের বকেয়া টাকা', arrow: true },
+    { id: 'a12', label: 'ব্যবসায়িক পণ্য', arrow: true },
+    { id: 'a13', label: 'ধার দেয়া টাকা (যা পাওয়ার সম্ভাবনা আছে)', arrow: true },
+    { id: 'a14', label: 'স্থাবর সম্পত্তি যেমন (ব্যক্তিগত ব্যবহার ছাড়া অতিরিক্ত ব্যবসার উদ্দেশ্যে রাখা ফ্লাট, প্লট, দোকান, বিল্ডিং ইত্যাদির বর্তমান বাজার মূল্য)।', arrow: true },
+  ];
+
+  // Define Liability Rows based on the uploaded image
+  const liabilityRows = [
+    { id: 'l1', label: 'অন্যের নিকট হতে ব্যক্তিগত ঋণ/ধার (শুধুমাত্র নিজে থাকার, পরিধেয়, ঘরের আসবাবপত্র কিংবা ব্যক্তিগত ব্যবহারের জন্য যানবাহন ক্রয় ইত্যাদির জন্য যদি ঋণ করা হয় তাহলে তা এখানে আসবে)', arrow: true },
+    { id: 'l2', label: 'ভাড়া, বিল ও অন্যান্য ইউটিলিটি যদি বকেয়া থাকে', arrow: true },
+    { id: 'l3', label: 'কর্মচারীদের বেতন যদি বকেয়া থাকে', arrow: true },
+    { id: 'l4', label: 'বিবিধ পাওনাদার', arrow: true },
+    { id: 'l5', label: 'অন্যান্য যৌক্তিক খরচ যদি বাকি থাকে', arrow: true },
+  ];
+
+  // Calculations
+  const totalAssets = assetRows.filter(r => !r.isTitle).reduce((acc, row) => acc + getValue(row.id), 0);
+  const totalLiabilities = liabilityRows.reduce((acc, row) => acc + getValue(row.id), 0);
+  const netAssets = Math.max(0, totalAssets - totalLiabilities);
+  const zakat = netAssets * 0.025;
+
+  return (
+    <div className="min-h-screen bg-slate-100 py-8 px-4 font-sans text-slate-800 selection:bg-blue-200">
+      <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-slate-200">
+        
+        {/* Header Area */}
+        <div className="bg-slate-50 text-center py-4 border-b border-slate-200">
+          <p className="text-sm text-slate-600 mb-2">বিসমিহি তা'আলা</p>
+          <div className="inline-block bg-[#2b3d88] text-white px-8 py-2 rounded-full shadow-md">
+            <h1 className="text-2xl font-bold tracking-wide">যাকাত নির্ণয় ক্যালকুলেটর</h1>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200 bg-slate-100">
+          <button
+            onClick={() => setActiveTab('calculator')}
+            className={`flex-1 py-3 px-4 font-bold text-lg transition-colors ${activeTab === 'calculator' ? 'bg-white text-[#2b3d88] border-t-2 border-[#2b3d88]' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            ক্যালকুলেটর
+          </button>
+          <button
+            onClick={() => setActiveTab('rules')}
+            className={`flex-1 py-3 px-4 font-bold text-lg transition-colors ${activeTab === 'rules' ? 'bg-white text-[#2b3d88] border-t-2 border-[#2b3d88]' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            যাকাতের বিবিধ মাসায়েল
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className="p-0 sm:p-6 bg-white">
+          
+          {/* CALCULATOR TAB */}
+          {activeTab === 'calculator' && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-slate-300 text-sm md:text-base">
+                <thead>
+                  <tr className="bg-[#e4e9f2] text-[#2b3d88]">
+                    <th className="border border-slate-300 px-4 py-3 text-center font-bold w-3/4">সম্পদ সমূহ</th>
+                    <th className="border border-slate-300 px-4 py-3 text-center font-bold w-1/4">টাকা</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assetRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className={`border border-slate-300 px-4 py-2 ${row.indent ? 'pl-12' : ''} ${row.isTitle ? 'font-bold bg-slate-50' : ''}`}>
+                        <div className="flex items-start">
+                          {row.arrow && <span className="text-slate-400 mr-2 mt-0.5 text-lg leading-none">⇨</span>}
+                          <span>{row.label}</span>
+                        </div>
+                      </td>
+                      <td className="border border-slate-300 p-0 bg-white align-middle">
+                        {!row.isTitle ? (
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-full h-full min-h-[40px] px-3 py-2 text-right outline-none focus:ring-2 focus:ring-blue-400 focus:bg-blue-50 transition-all font-semibold"
+                            value={values[row.id] || ''}
+                            onChange={(e) => handleChange(row.id, e.target.value)}
+                            placeholder="০"
+                          />
+                        ) : (
+                          <div className="w-full h-full min-h-[40px] bg-slate-100"></div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {/* Asset Subtotal */}
+                  <tr className="bg-slate-100 font-bold">
+                    <td className="border border-slate-300 px-4 py-3 text-right">মোট সম্পত্তি</td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-blue-900">{formatCurrencyBn(totalAssets)}</td>
+                  </tr>
+
+                  {/* Liabilities Header */}
+                  <tr className="bg-[#e4e9f2] text-[#2b3d88]">
+                    <th colSpan="2" className="border border-slate-300 px-4 py-3 text-center font-bold">দায়সমূহ</th>
+                  </tr>
+
+                  {/* Liabilities Rows */}
+                  {liabilityRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="border border-slate-300 px-4 py-2">
+                        <div className="flex items-start">
+                          {row.arrow && <span className="text-slate-400 mr-2 mt-0.5 text-lg leading-none">⇨</span>}
+                          <span>{row.label}</span>
+                        </div>
+                      </td>
+                      <td className="border border-slate-300 p-0 bg-white align-middle">
+                        <input
+                          type="number"
+                          min="0"
+                          className="w-full h-full min-h-[40px] px-3 py-2 text-right outline-none focus:ring-2 focus:ring-red-300 focus:bg-red-50 transition-all font-semibold text-red-700"
+                          value={values[row.id] || ''}
+                          onChange={(e) => handleChange(row.id, e.target.value)}
+                          placeholder="০"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Liabilities Subtotal */}
+                  <tr className="bg-slate-100 font-bold">
+                    <td className="border border-slate-300 px-4 py-3 text-right">মোট দায়</td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-red-700">{formatCurrencyBn(totalLiabilities)}</td>
+                  </tr>
+
+                  {/* Final Calculation Block */}
+                  <tr>
+                    <td className="border border-slate-300 px-4 py-3 text-right font-bold">মোট সম্পত্তি</td>
+                    <td className="border border-slate-300 px-4 py-3 text-right font-bold">{formatCurrencyBn(totalAssets)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-slate-300 px-4 py-3 font-bold flex justify-between items-center border-b-0 border-t-0">
+                      <span>(বিয়োগ)</span>
+                      <span>মোট দায়</span>
+                    </td>
+                    <td className="border border-slate-300 px-4 py-3 text-right font-bold text-red-700">{formatCurrencyBn(totalLiabilities)}</td>
+                  </tr>
+                  <tr className="bg-[#f0f4f8]">
+                    <td className="border border-slate-300 px-4 py-3 font-bold text-lg">যাকাতযোগ্য মোট সম্পদ (টাকার) পরিমাণ</td>
+                    <td className="border border-slate-300 px-4 py-3 text-right font-bold text-lg text-[#2b3d88]">{formatCurrencyBn(netAssets)}</td>
+                  </tr>
+                  <tr className="bg-[#e6f4ea]">
+                    <td className="border border-slate-300 px-4 py-4 font-bold text-lg text-green-800">প্রদেয় যাকাতের পরিমাণ উদ্বৃত্ত সম্পদের ২.৫%</td>
+                    <td className="border border-slate-300 px-4 py-4 text-right font-extrabold text-xl text-green-900">{formatCurrencyBn(zakat)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Footer Information */}
+              <div className="mt-8 pt-6 border-t-2 border-slate-200 text-sm grid grid-cols-1 md:grid-cols-2 gap-8 px-4 md:px-2 pb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-slate-500 font-semibold">সংকলক</p>
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-[#2b3d88] mb-3">মুফতী মুহিব্বুল্লাহ্ ফরহাদ</h3>
+                  <p className="mb-1"><strong>দাওরা ও ইফতা:</strong> জামিয়াতুল উলূম আল-ইসলামিয়া আল্লামা ইউসুফ বিন্নুরী টাউন, করাচী-পাকিস্তান।</p>
+                  <p className="mb-1"><strong>খতীব:</strong> ভাদাম হাজী ইয়াকুব আলী জামে মসজিদ, টঙ্গী, গাজীপুর।</p>
+                  <p className="mb-1"><strong>মুহতামিম:</strong> ভাদাম দারুন নাজাত কওমী মাদরাসা, টঙ্গী, গাজীপুর।</p>
+                  <p className="mb-1"><strong>প্রতিষ্ঠাতা মুহতামিম:</strong> আল-জামিআতু হামিউস সুন্নাহ (বামনখোলা মাদরাসা), কাপাসিয়া, গাজীপুর।</p>
+                  <p className="mt-2 text-base"><strong>প্রয়োজনে:</strong> <span className="font-semibold tracking-wider">০১৯২১৫৪৪০৪৭</span></p>
+                </div>
+                
+                <div className="md:border-l-2 md:border-slate-200 md:pl-8">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-slate-500 font-semibold">নজরে ছানি ও সম্পাদনা</p>
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-[#2b3d88] mb-3">আল্লামা মুফতি মাসউদুল করীম</h3>
+                  <p className="mb-1">মুহতামিম ও শাইখুল হাদীস</p>
+                  <p>টঙ্গী দারুল উলুম মাদরাসা</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* RULES TAB */}
+          {activeTab === 'rules' && (
+            <div className="p-4 md:p-6 text-slate-800 space-y-8 leading-relaxed">
+              
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-[#2b3d88] border-b-2 border-slate-200 inline-block pb-2 px-8">যাকাতের বিবিধ মাসায়েল</h2>
+              </div>
+
+              {/* Section 1 */}
+              <section>
+                <div className="text-center mb-4">
+                  <h3 className="inline-block bg-[#2b3d88] text-white px-6 py-1.5 rounded-full font-bold shadow-sm">যাকাত আদায়ের হুকুম</h3>
+                </div>
+                <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                  <p>সাহেবে নিসাব ব্যক্তির জন্য যাকাত আদায় করা শরীয়তের দৃষ্টিতে ফরয, যাকাত ইসলামের আরকানের মধ্যে অন্যতম একটি রোকন। যাকাত অস্বীকার করায় ঈমান চলে যায়। আর ফরযিয়্যাত স্বীকার করে তা আদায় না করা হারাম ও কবীরা গুনাহ।</p>
+                </div>
+              </section>
+
+              {/* Section 2 */}
+              <section>
+                <div className="text-center mb-4">
+                  <h3 className="inline-block bg-[#2b3d88] text-white px-6 py-1.5 rounded-full font-bold shadow-sm">যাকাত কার উপর এবং কিসের উপর ফরয</h3>
+                </div>
+                <div className="space-y-3">
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> ঋণ ও মৌলিক প্রয়োজনের অতিরিক্ত সাড়ে সাত তোলা স্বর্ণ কিংবা সাড়ে বায়ান্নো তোলা রৌপ্য অথবা তৎসমমূল্যের নগদ টাকা বা ব্যবসায়ী মালের মালিক হলে তার উপর যাকাত ফরয হয়। (শামী)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> যদি কারও নিকট নেছাব পরিমাণ মাল বছরের শুরু ও শেষে পুরা থাকে তবে তার যাকাত দিতে হবে। (আলমগীরী)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> যদি কিছু সোনা এবং কিছু রূপা থাকে কিন্তু উভয়ের মূল্য যোগ করলে যে কোন একটির নেসাব পুরা হয়, তবে যাকাত ফরয হবে। (আলমগীরী)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> ব্যবসার মাল যদি সাড়ে বায়ান্নো তোলা রূপার মূল্যের সমান থাকে তাহলে এগুলোর উপর যাকাত দিতে হবে। (হেদায়া)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> কারখানা এবং মিল ইত্যাদির মেশিনের উপর যাকাত ফরয নয়। তবে এগুলোতে যে মাল তৈরী হয় সেগুলোর উপর যাকাত ফরয। (শামী)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> সোনা, রূপা যে কোন অবস্থায় থাকুক না কেন (মাটির নীচে পোতা, কারবারে, সরকারে কাছে, করয হিসাবে, অলংকার আকারে, কাপরে, টুপিতে ইত্যাদি) নেসাব পূর্ণ হলে এতে যাকাত ফরয হবে। (বেহেশতী জেওর)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> মিল, কোম্পানী ইত্যাদির শেয়ার যদি নেসাব পরিমাণ হয় তবে যাকাত ফরয হবে। (জাওয়াহেরুল ফিকহ)</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> প্রভিডেন্ড ফান্ড যা এখনও উসুল হয় নাই এর যাকাত ফরয নয়, তবে চাকরী ছাড়ার পর প্রাপ্ত টাকা যদি নেসাব পরিমাণ হয় তবে যাকাত ফরয হবে। পিছনের বছরগুলোর যাকাত দিতে হবে না। (জাওয়াহেরুল ফিকহ)</p>
+                </div>
+              </section>
+
+              {/* Section 3 */}
+              <section>
+                <div className="text-center mb-4">
+                  <h3 className="inline-block bg-[#2b3d88] text-white px-6 py-1.5 rounded-full font-bold shadow-sm">যাকাতের সমকালীন প্রয়োজনীয় মাসায়েল</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">শেয়ার:</span> বর্তমানে দু'ধরনের শেয়ার হোল্ডার লক্ষ করা যায়<br/>
+                      ১. যারা আইপিওতে অংশগ্রহণ করে স্টক এক্সচেঞ্জ থেকে শেয়ার খরিদ করে থাকে কোম্পানির বার্ষিক লভ্যাংশ পাওয়ার উদ্দেশ্যে।<br/>
+                      ২. যারা ক্যাপিটাল গেইন করে কোম্পানির ঘোষিত লভ্যাংশ নেওয়ার জন্য, যারা শুধু ব্যবসায়ী পণ্য হিসাবে শেয়ারের কারবার করে থাকে তারা যাকাত আদায় করবে শেয়ারের মার্কেট ভ্যালু হিসাবে। আর যারা কোম্পানির লভ্যাংশ হাসিলের জন্য শেয়ার ক্রয় করে তারা কোম্পানির ব্যালেন্সশীট দেখে যাকাত পরিশোধ করবেন।
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">ব্যাংক একাউন্ট:</span> ব্যাংকের ব্যক্তি মালিকানাধীন সকল প্রকার একাউন্ট যাকাতযোগ্য। নেসাবের মালিক হলেই যাকাত প্রদান করতে হবে। চলতি হিসাব, সঞ্চয়ী হিসাব, দীর্ঘমেয়াদী হিসাব সহ সকল একাউন্ট এ হুকুমের অন্তর্ভূক্ত হবে।
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">ব্যাংক গ্যারান্টি মানি:</span> ব্যাংক গ্যারান্টি মানির মালিক স্বয়ং একাউন্ট হোল্ডার, অতএব অন্যান্য টাকার মতই এ টাকার যাকাত প্রদান করতে হবে।
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">ব্যাংক লোন:</span> সাধারণত যাকাতদাতার কোন ঋণ থাকলে তা যাকাতের হিসাব থেকে বিয়োগ করার বিধান রয়েছে। তবে যাকাতের হিসাবের সময় ডেভেলপমেন্ট বা উন্নয়নমূলক লোন বিয়োগ হবে না।
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">সিকিউরিটি মানি:</span> বাড়ি বা দোকান ইত্যাদি ভাড়া নেওয়ার জন্য সাধারনত দু'ধরনের পন্থা অবলম্বন করা হয়。<br/>
+                      ১. অগ্রীম ভাড়া বাবদ জামানত (এডভান্স সিকিউরিটি)<br/>
+                      ২. ফেরতযোগ্য জামানত, যা ভাড়া হিসাবে কর্তন করা হয় না, বাড়ি/দোকান ছাড়ার সময় ফেরত দেওয়া হয়।<br/>
+                      উপরোক্ত দু'প্রকারের মধ্যে প্রথম প্রকারের ক্ষেত্রে এ টাকার যাকাত আদায় করবে ভাড়া দাতা মালিক, আর ২য় প্রকারের টাকা যেহেতু শরীয়তের দৃষ্টিতে ‘রাহান’ তথা বন্ধক, তাই মালিকের জন্য টাকাগুলো যথাযথ হেফাজত করে রাখা ওয়াজিব। এ ক্ষেত্রে যদি বন্ধকগ্রহীতা অন্যায়ভাবে সিকিউরিটির টাকা খরচ করে ফেলে তবে এর যাকাত সেই পরিশোধ করবে। আর যদি সে তা সংরক্ষণ করে রাখে তবে এ টাকা যাকাত বন্ধকদাতা আদায় করবে।
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">বায়নানামার টাকা:</span> জমি, ফ্লাট বা অন্য কিছু কিনে প্রাথমিকভাবে যে আংশিক টাকা প্রদান করে বায়নানামা চুক্তি হয় সে টাকার মালিক বিক্রেতা, সুতরাং এর যাকাত বিক্রেতা আদায় করবে।
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">ব্যবসায়িক পণ্যের কোন মূল্য ধর্তব্য:</span> যে দিন তার যাকাত বর্ষ পুরো হয়েছে সেদিন তার ব্যবসায়িক পণ্যগুলো একত্রে বিক্রি করে দিলে যে দাম পাওয়া যেত সে মূল্যের হিসাবে যাকাত প্রদান করবে।
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <span className="text-slate-400 mr-2 mt-1 text-xl leading-none">⇨</span>
+                    <div>
+                      <span className="font-bold text-slate-900">বিক্রিত পণ্যের বকেয়া টাকার যাকাত:</span> ব্যবসায়ীরা তাদের যে সকল পণ্য বাকিতে বিক্রি করে থাকে সে বকেয়া টাকার যাকাতও তাদেরকে আদায় করতে হবে। বিস্তারিত: মাসিক আল কাউসার, রমযান-শাওয়াল ১৪২৬ হি.।
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 4 */}
+              <section>
+                <div className="text-center mb-4 mt-8">
+                  <h3 className="inline-block bg-[#2b3d88] text-white px-6 py-1.5 rounded-full font-bold shadow-sm">যাকাত কে, কাকে, কখন দিবে?</h3>
+                </div>
+                <div className="space-y-3 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> সাবালক, সজ্ঞান, মুসলমান, নেসাব পরিমাণ মালের মালিক হওয়ার পর মালের চল্লিশ ভাগের এক ভাগ দিবে।</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> এমন সব গরীব ও ফকীর-মিসকীনকে দিতে হবে যাদের নিকট নেসাব পরিমাণ মাল নেই।</p>
+                  <p><span className="font-bold text-[#2b3d88]">মাসআলা:</span> বছরের হিসাব চাঁদের মাস হিসাবে ধর্তব্য হবে। (আলমগীরী)</p>
+                </div>
+              </section>
+
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
