@@ -14,7 +14,7 @@
     .border-brand { border-color: #2b3d88; }
     .bg-soft-blue { background-color: #f0f4f8; }
     .bg-soft-green { background-color: #e6f4ea; }
-    /* ensure table borders & inputs look consistent */
+    /* table borders & inputs */
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button {
       opacity: 1;
@@ -26,6 +26,33 @@
       color: #94a3b8;
       margin-right: 0.3rem;
     }
+    /* print styles */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-statement, #printable-statement * {
+        visibility: visible;
+      }
+      #printable-statement {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+        padding: 1.5rem;
+      }
+      .no-print, .no-print * {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      /* ensure table borders print */
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ccc; padding: 8px; }
+    }
+    .print-only { display: none; }
   </style>
 </head>
 <body class="bg-slate-100 font-sans antialiased">
@@ -41,7 +68,6 @@
 <!-- The Zakat Calculator component as a Babel script (JSX) -->
 <script type="text/babel">
   (function() {
-    // Use React and useState
     const { useState } = React;
 
     // Utility: convert numbers to Bengali numerals
@@ -54,7 +80,6 @@
     // Utility: format as currency with Bengali numerals
     const formatCurrencyBn = (num) => {
       if (num === undefined || num === null || (typeof num === 'number' && isNaN(num))) return '';
-      // Ensure it's a number
       const value = typeof num === 'string' ? parseFloat(num) : num;
       if (value === 0) return toBnNum('০');
       if (!value) return '';
@@ -65,6 +90,10 @@
     function ZakatCalculator() {
       const [activeTab, setActiveTab] = useState('calculator');
       const [values, setValues] = useState({});
+      // print modal state
+      const [showPrintModal, setShowPrintModal] = useState(false);
+      const [holderName, setHolderName] = useState('');
+      const [statementDate, setStatementDate] = useState(new Date().toISOString().slice(0,10)); // YYYY-MM-DD
 
       const handleChange = (id, val) => {
         setValues(prev => ({ ...prev, [id]: val }));
@@ -114,6 +143,18 @@
       const netAssets = Math.max(0, totalAssets - totalLiabilities);
       const zakat = netAssets * 0.025;
 
+      // Handle print button click: show modal
+      const openPrintModal = () => setShowPrintModal(true);
+
+      // Handle print submission
+      const handlePrint = () => {
+        setShowPrintModal(false);
+        // Use setTimeout to ensure modal is hidden before print
+        setTimeout(() => {
+          window.print();
+        }, 100);
+      };
+
       return (
         <div className="min-h-screen bg-slate-100 py-8 px-4 font-sans text-slate-800">
           <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-slate-200">
@@ -154,6 +195,7 @@
             <div className="p-0 sm:p-6 bg-white">
               {activeTab === 'calculator' && (
                 <div className="overflow-x-auto">
+                  {/* Main calculator table */}
                   <table className="w-full border-collapse border border-slate-300 text-sm md:text-base">
                     <thead>
                       <tr className="bg-brand-light text-brand">
@@ -248,8 +290,121 @@
                     </tbody>
                   </table>
 
+                  {/* PRINT BUTTON */}
+                  <div className="flex justify-end mt-6 no-print">
+                    <button
+                      onClick={openPrintModal}
+                      className="bg-brand hover:bg-blue-800 text-white font-bold py-2 px-6 rounded-full shadow-md transition flex items-center gap-2"
+                    >
+                      <span>🖨️</span> প্রিন্ট / পিডিএফ
+                    </button>
+                  </div>
+
+                  {/* PRINT MODAL */}
+                  {showPrintModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 no-print">
+                      <div className="bg-white rounded-xl shadow-xl p-6 w-96 max-w-full">
+                        <h3 className="text-xl font-bold text-brand mb-4">যাকাত বিবরণী প্রিন্ট</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">যাকাতদাতার নাম</label>
+                            <input
+                              type="text"
+                              className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-brand focus:outline-none"
+                              value={holderName}
+                              onChange={(e) => setHolderName(e.target.value)}
+                              placeholder="যেমন: মোঃ রহিম"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">তারিখ</label>
+                            <input
+                              type="date"
+                              className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-brand focus:outline-none"
+                              value={statementDate}
+                              onChange={(e) => setStatementDate(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6">
+                          <button
+                            onClick={() => setShowPrintModal(false)}
+                            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100"
+                          >
+                            বাতিল
+                          </button>
+                          <button
+                            onClick={handlePrint}
+                            className="bg-brand text-white px-5 py-2 rounded-lg hover:bg-blue-800 font-semibold"
+                          >
+                            প্রিন্ট করুন
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PRINT-ONLY STATEMENT (hidden normally, shown during print) */}
+                  <div id="printable-statement" className="print-only">
+                    <div className="text-center mb-6">
+                      <h2 className="text-2xl font-bold text-brand">যাকাত নির্ণয় বিবরণী</h2>
+                      <p className="text-lg">বিসমিহি তা'আলা</p>
+                      {holderName && <p className="font-semibold mt-2">যাকাতদাতার নাম: {holderName}</p>}
+                      {statementDate && <p>তারিখ: {statementDate}</p>}
+                    </div>
+                    <table className="w-full border-collapse border border-slate-400">
+                      {/* copy of table structure without input fields? We'll reuse the same data but render static values */}
+                      <thead>
+                        <tr className="bg-gray-200">
+                          <th className="border p-2 text-left">সম্পদ সমূহ</th>
+                          <th className="border p-2 text-right">টাকা</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assetRows.filter(r => !r.isTitle).map((row, idx) => (
+                          <tr key={idx}>
+                            <td className="border p-2">{row.label}</td>
+                            <td className="border p-2 text-right font-mono">{formatCurrencyBn(getValue(row.id)) || '০'}</td>
+                          </tr>
+                        ))}
+                        <tr className="font-bold bg-gray-100">
+                          <td className="border p-2 text-right">মোট সম্পত্তি</td>
+                          <td className="border p-2 text-right">{formatCurrencyBn(totalAssets)}</td>
+                        </tr>
+                        <tr><td colSpan="2" className="border p-2 bg-gray-200 font-bold text-center">দায়সমূহ</td></tr>
+                        {liabilityRows.map((row, idx) => (
+                          <tr key={idx}>
+                            <td className="border p-2">{row.label}</td>
+                            <td className="border p-2 text-right font-mono">{formatCurrencyBn(getValue(row.id)) || '০'}</td>
+                          </tr>
+                        ))}
+                        <tr className="font-bold bg-gray-100">
+                          <td className="border p-2 text-right">মোট দায়</td>
+                          <td className="border p-2 text-right">{formatCurrencyBn(totalLiabilities)}</td>
+                        </tr>
+                        <tr>
+                          <td className="border p-2 text-right font-bold">মোট সম্পত্তি</td>
+                          <td className="border p-2 text-right font-bold">{formatCurrencyBn(totalAssets)}</td>
+                        </tr>
+                        <tr>
+                          <td className="border p-2 font-bold flex justify-between"><span>(বিয়োগ)</span> <span>মোট দায়</span></td>
+                          <td className="border p-2 text-right font-bold text-red-700">{formatCurrencyBn(totalLiabilities)}</td>
+                        </tr>
+                        <tr className="bg-blue-100">
+                          <td className="border p-2 font-bold text-lg">যাকাতযোগ্য মোট সম্পদ</td>
+                          <td className="border p-2 text-right font-bold text-lg">{formatCurrencyBn(netAssets)}</td>
+                        </tr>
+                        <tr className="bg-green-100">
+                          <td className="border p-2 font-bold text-lg">প্রদেয় যাকাত (২.৫%)</td>
+                          <td className="border p-2 text-right font-extrabold text-xl">{formatCurrencyBn(zakat)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div className="mt-6 text-sm text-center text-gray-600">এটি কম্পিউটার কর্তৃক নির্ণীত যাকাত বিবরণী</div>
+                  </div>
+
                   {/* Footer info (same as original) */}
-                  <div className="mt-8 pt-6 border-t-2 border-slate-200 text-sm grid grid-cols-1 md:grid-cols-2 gap-8 px-4 md:px-2 pb-4">
+                  <div className="mt-8 pt-6 border-t-2 border-slate-200 text-sm grid grid-cols-1 md:grid-cols-2 gap-8 px-4 md:px-2 pb-4 no-print">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <p className="text-slate-500 font-semibold">সংকলক</p>
@@ -377,11 +532,10 @@
       );
     }
 
-    // Render the app into the root element
     ReactDOM.createRoot(document.getElementById('root')).render(<ZakatCalculator />);
   })();
 </script>
 
-<!-- small note: ensure the root div is filled -->
+<!-- ensure root is visible -->
 </body>
 </html>
